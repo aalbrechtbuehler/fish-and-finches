@@ -22,14 +22,14 @@ p_load(tidyverse, readr, tidyr, dplyr, paletteer, reasytries, strs, stringi, str
 ```{r prep}
 
 #read in data
-bird1 <- read.csv("bird_1_df.csv")
-bird2 <- read.csv("bird_2_df.csv")
-bird4 <- read.csv("bird_4_df.csv")
+bird1 <- read.csv("../bird-data/raw/bird_1_df.csv")
+bird2 <- read.csv("../bird-data/raw/bird_2_df.csv")
+bird4 <- read.csv("../bird-data/raw/bird_4_df.csv")
 
 # #bird id column
-bird1$bird <- "1"
-bird2$bird <- "2"
-bird4$bird <- "4"
+bird1$bird <- "bird1"
+bird2$bird <- "bird2"
+bird4$bird <- "bird4"
 
 #songs collapsed by repeats (e.g., "aaaabbbbccdddddccc" = "abcdc") to look at higher order patterns
 bird1$col_song <- lapply(bird1$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
@@ -440,6 +440,15 @@ I identified prefixes from the trie that occur in more than 10% of songs, by bir
 # identify deterministic prefixes occurring more than 50% of the time
 cropTable <- trieCounts[(round(trieCounts$prop, 2)) >=.10,]
 
+# fullPrefixTable <- cropTable %>%
+#   group_by(bird) %>%
+#   mutate(normProp = prop / sum(prop)) %>%
+#   ungroup() %>%
+#   mutate(bird = recode(bird, '1' = 'bird1', '2' = 'bird2', '4' = 'bird4'))
+
+#write.csv(cropTable,"../bird-data/prefixes.csv", row.names = FALSE)
+
+
 # same for suffixes
 #cropTableSuffix <- trieCountsSuffix[(round(trieCountsSuffix$prop, 2)) >=.5,]
 
@@ -460,27 +469,33 @@ for (n in 1:length(all)){
     #if collapsed song contains prefix
     if (1 %in% bool) {
       
-      #prefix to crop is longest version
       prefix2crop <- cropTable$prefix[max(which(bool == 1))]
-      dat$prefix[i] <- prefix2crop 
+      dat$prefix[i] <- prefix2crop
       
-      #crop out prefix from cropped song
       dat$cropped_col_song[i] <- strs_removeprefix(dat$col_song[i], prefix2crop)
       
-      #locate end of prefix in full song (uncollapsed) by finding first instance of last character of prefix and cropping all preceding out
-      prefix_end <- stri_sub(prefix2crop,nchar(prefix2crop), nchar(prefix2crop))
-      first_in_run <- regexpr(prefix_end, song)[1]
-      m <- regexpr(paste0(prefix_end, "+"), substring(song, first_in_run))
-      last_in_run <- first_in_run + attr(m, "match.length") - 1
+      # --- simplified full-song cropping ---
+      chars <- strsplit(song, "")[[1]]
+      r <- rle(chars)
+      collapsed_song <- paste0(r$values, collapse = "")
       
-      dat$cropped_song[i] <- substr(song, last_in_run + 1, nchar(song)) 
+      pos <- regexpr(prefix2crop, collapsed_song)[1]
+      
+      if (pos == -1) {
+        dat$cropped_song[i] <- song
+      } else {
+        end_collapsed <- pos + nchar(prefix2crop) - 1
+        end_full <- cumsum(r$lengths)[end_collapsed]
+        dat$cropped_song[i] <- substr(song, end_full + 1, nchar(song))
+        dat$fullPrefix[i] <- substr(song, 1, end_full)
+      }
       
     } else {
       
-      #no cropping needed if prefix not present
       dat$prefix[i] <- NA
       dat$cropped_col_song[i] <- dat$col_song[i]
       dat$cropped_song[i] <- dat$song[i]
+      dat$fullPrefix[i] <- NA
       
     }
   }
@@ -488,6 +503,12 @@ for (n in 1:length(all)){
   all[[n]] <- dat
 }
 
+prefixes <- na.omit(bind_rows(lapply(all, function(df) {
+  df %>%
+    select(bird, fullPrefix)   # replace with your column names
+})))
+
+write.csv(prefixes,"../bird-data/prefixes.csv", row.names = FALSE)
 
 ```
 
@@ -505,6 +526,8 @@ for (dat in all){
   writeLines(unlist(dat$col_song), sprintf("bird%s_collapsed.txt", bird))
   
 }
+
+
 
 ```
 

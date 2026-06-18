@@ -8,15 +8,23 @@ output: html_document
 library(pacman)
 p_load(dplyr, ggplot2, papaja, tidybins)
 
-df <- read.csv("simResults.csv")
+df <- read.csv("../simResults.csv")
 
 # data wrangling
 df$nStates = as.factor(df$nStates)
-df$trueK = as.factor(df$trueK)
 df$entropyBinned <- cut(df$entropy, breaks=c(0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1), include.lowest = T)
 
 #correct detection of true generative k
 df$correct <- df$k == df$trueK
+
+df <- df %>%
+  mutate(
+    overunder = case_when(
+      k < trueK ~ "under",
+      k > trueK ~ "over",
+      TRUE ~ "exact"
+    )
+  )
 
 #find best performing k-order by way, sim, state set size, corpus size, and dirichlet alpha
 bestKs <- df %>%
@@ -25,6 +33,11 @@ bestKs <- df %>%
 
 # overall way accuracy by true k for reporting
 wayComparison <- aggregate(bestKs, correct ~ way, FUN = mean)
+
+# number of over/under estimates by way
+estComparison <- bestKs %>%
+  group_by(way)%>%
+  count(overunder)
 
 #plot :)
 
@@ -74,8 +87,8 @@ ggplot(bestKs, aes(x = corpusSize, y = correct, group = way, color = way))+
 ```{r}
 
 #choose a df
-birdDF <- read.csv("birdResultsCropped.csv")
-fishDF <- read.csv("fishResults.csv")
+birdDF <- read.csv("../bird-data/birdResultsCropped.csv")
+fishDF <- read.csv("../fish-data/fishResults.csv")
 
 birdDF$k <- as.factor(birdDF$k)
 fishDF$k <- as.factor(fishDF$k)
@@ -86,16 +99,29 @@ fishMaxs <- fishDF %>%
   slice_max(log_likelihood, n = 1, with_ties = T) %>%
   ungroup()
 
-# find most occurring best k by species
 fishResults <- fishMaxs %>%
+  #find most occuring best K
   count(species, k, name = "count") %>%
   group_by(species) %>%
-  slice_max(count, n = 1, with_ties = F) %>%
-  ungroup()%>%
+  slice_max(count, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  
+  # find average ll associated with most occurring k
   left_join(
     fishMaxs %>%
       group_by(species, k) %>%
       summarise(avgLL = mean(log_likelihood), .groups = "drop"),
+    by = c("species", "k")
+  ) %>%
+  
+  # find most occurring smoother for most occurring k
+  left_join(
+    fishMaxs %>%
+      count(species, k, smoother) %>%
+      group_by(species, k) %>%
+      slice_max(n, n = 1, with_ties = FALSE) %>%
+      ungroup() %>%
+      select(species, k, smoother),
     by = c("species", "k")
   )
 
@@ -121,14 +147,28 @@ birdMaxs <- birdDF %>%
 
 # find most occurring best k by species
 birdResults <- birdMaxs %>%
+  #find most occuring best K
   count(species, k, name = "count") %>%
   group_by(species) %>%
-  slice_max(count, n = 1, with_ties = F) %>%
-  ungroup()%>%
+  slice_max(count, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  
+  # find average ll associated with most occurring k
   left_join(
     birdMaxs %>%
       group_by(species, k) %>%
       summarise(avgLL = mean(log_likelihood), .groups = "drop"),
+    by = c("species", "k")
+  ) %>%
+  
+  # find most occurring smoother for most occurring k
+  left_join(
+    birdMaxs %>%
+      count(species, k, smoother) %>%
+      group_by(species, k) %>%
+      slice_max(n, n = 1, with_ties = FALSE) %>%
+      ungroup() %>%
+      select(species, k, smoother),
     by = c("species", "k")
   )
 
