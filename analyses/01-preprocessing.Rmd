@@ -520,10 +520,10 @@ for (dat in all){
   
   bird <- dat$bird[1]
   
-  writeLines(dat$cropped_song, sprintf("bird%s_cropped_full.txt", bird))
-  writeLines(dat$song, sprintf("bird%s_full.txt", bird))
-  writeLines(unlist(dat$cropped_col_song), sprintf("bird%s_cropped_collapsed.txt", bird))
-  writeLines(unlist(dat$col_song), sprintf("bird%s_collapsed.txt", bird))
+  writeLines(dat$cropped_song, sprintf("../bird-data/raw/%s_cropped_full.txt", bird))
+  writeLines(dat$song, sprintf("../bird-data/raw/%s_full.txt", bird))
+  writeLines(unlist(dat$cropped_col_song), sprintf("../bird-data/raw/%s_cropped_collapsed.txt", bird))
+  writeLines(unlist(dat$col_song), sprintf("../bird-data/raw/%s_collapsed.txt", bird))
   
 }
 
