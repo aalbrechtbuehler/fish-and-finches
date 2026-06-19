@@ -15,6 +15,168 @@ p_load(tidyverse, readr, tidyr, dplyr, paletteer, reasytries, strs, stringi, str
 
 ```
 
+# Fish
+
+## Preprocessing and Stats Table
+
+```{r}
+
+speciesList <- c('bre', 'mil', 'mul', 'oce', 'orn', 'pul')
+
+# read data
+dat <- read.csv("../fish-data/raw/PrettyDat.csv")
+
+
+#expand dat into sequences by trial_id, sequence_id, and fish_id
+expanded <- dat %>%
+  arrange(trial_id, sequence_id, order_id, fish_id, species) %>%
+  group_by(trial_id, sequence_id, fish_id, species) %>%
+  summarise(
+  series = paste(rep(state, times = length), collapse = ""),
+  .groups = "drop"
+)
+
+#series collapsed by repeats (e.g., "aaaabbbbccdddddccc" = "abcdc") to look at higher order patterns
+expanded$col_series <- lapply(expanded$series, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
+
+#useful descriptive stats
+statsTable <- expanded%>%
+  group_by(species)%>%
+  summarise(nSeq = nrow(species),
+             full_q3s = ceiling(quantile(nchar(series), 0.75)),
+             col_q3s =  ceiling(quantile(nchar(col_series), 0.75)),
+             fullMax = max(nchar(series)),
+             colMax = max(nchar(col_series))
+  )
+
+
+```
+
+## Ribbon Plots
+
+### collapsed
+```{r}
+
+
+for (fish in speciesList) {
+  
+  fishDF <- expanded[expanded$species==fish,]
+  
+  strings <- unlist(fishDF$col_series)
+  
+  #split strings
+  splitStrs <- strsplit(strings, "")
+  
+  #maximum length to pad with NAs
+  maxL <- max(sapply(splitStrs, length))
+  
+  #long table of syllable by timepoint by sequence
+  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
+    chars <- splitStrs[[i]]
+    
+    tibble(
+      string_id = i,
+      position = seq_len(maxL),
+      character = c(chars, rep(NA, maxL - length(chars)))
+    )
+    
+  }))
+  
+  ribbonDat <- longSeqs %>%
+  group_by(position, character) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(!is.na(character)) %>%
+  group_by(position) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup() %>%
+  complete(
+    position,
+    character,
+    fill = list(n = 0, proportion = 0)
+  )
+  
+  q3 <- ceiling(quantile(nchar(strings), 0.75)) #use q3 length as cut-off point because sequences are variable length, and long outlier sequences heavily bias end of ribbon plot
+  
+  p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
+    geom_area() +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_continuous(limits = c(0, q3)) +
+    labs(
+      x = "Position",
+      y = "Proportion",
+      fill = "State",
+      title = fish
+    ) +
+    scale_fill_paletteer_d("rcartocolor::Prism") +
+    theme_minimal()
+  
+  print(p)
+  
+}
+```
+# full
+
+```{r}
+
+
+for (fish in speciesList) {
+  
+  fishDF <- expanded[expanded$species==fish,]
+  
+  strings <- unlist(fishDF$series)
+  
+  #split strings
+  splitStrs <- strsplit(strings, "")
+  
+  #maximum length to pad with NAs
+  maxL <- max(sapply(splitStrs, length))
+  
+  #long table of syllable by timepoint by sequence
+  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
+    chars <- splitStrs[[i]]
+    
+    tibble(
+      string_id = i,
+      position = seq_len(maxL),
+      character = c(chars, rep(NA, maxL - length(chars)))
+    )
+    
+  }))
+  
+  ribbonDat <- longSeqs %>%
+  group_by(position, character) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(!is.na(character)) %>%
+  group_by(position) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ungroup() %>%
+  complete(
+    position,
+    character,
+    fill = list(n = 0, proportion = 0)
+  )
+  
+  q3 <- ceiling(quantile(nchar(strings), 0.75)) #use q3 length as cut-off point because sequences are variable length, and long outlier sequences heavily bias end of ribbon plot
+  
+  p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
+    geom_area() +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_continuous(limits = c(0, q3)) +
+    labs(
+      x = "Position",
+      y = "Proportion",
+      fill = "State",
+      title = fish
+    ) +
+    scale_fill_paletteer_d("rcartocolor::Prism") +
+    theme_minimal()
+  
+  print(p)
+  
+}
+```
+
+
 # Birds
 
 ## Preprocessing and Stats Tables
@@ -64,7 +226,6 @@ b4_syll <- unique(unlist(strsplit(bird4$song, "")))
 all <- list("1" = bird1, "2" = bird2, "4" = bird4)
 
 ```
-
 
 ## Ribbon Plots
 
@@ -196,129 +357,7 @@ for (dat in all) {
 
 (I also wanted to see whether there were regularities at the ends of songs, like suffixes. These patterns are not as strong and further trie analyses did not identify anything particularly strong)
 
-### suffixes
 
-#### backwards collapsed
-
-```{r back-ribbons-col}
-
-for (dat in all) {
-  
-  bird <- dat$bird[1]
-  
-  stringsrev <- stri_reverse(unlist(dat$col_song))
-  
-  #split strings
-  splitStrs <- strsplit(stringsrev, "")
-  
-  #maximum length to pad with NAs
-  maxL <- max(sapply(splitStrs, length))
-  
-  #long table
-  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
-    chars <- splitStrs[[i]]
-    
-    tibble(
-      string_id = i,
-      position = seq_len(maxL),
-      character = c(chars, rep(NA, maxL - length(chars)))
-    )
-    
-  }))
-  
-  ribbonDat <- longSeqs %>%
-  group_by(position, character) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  filter(!is.na(character)) %>%
-  group_by(position) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(
-    position,
-    character,
-    fill = list(n = 0, proportion = 0)
-  )
-  
-  p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    geom_area() +
-    scale_y_continuous(labels = scales::percent) +
-    scale_x_continuous(limits = c(0, 30)) +
-    labs(
-      x = "Position",
-      y = "Proportion",
-      fill = "State",
-      title = bird
-    ) +
-    scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
-  
-  print(p)
-  
-}
-
-```
-
-#### backwards full
-
-```{r back-ribbons-full}
-
-for (dat in all) {
-  
-  bird <- dat$bird[1]
-  
-  stringsrev <- stri_reverse(unlist(dat$song))
-  
-  #split strings
-  splitStrs <- strsplit(stringsrev, "")
-  
-  #maximum length to pad with NAs
-  maxL <- max(sapply(splitStrs, length))
-  
-  #long table
-  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
-    chars <- splitStrs[[i]]
-    
-    tibble(
-      string_id = i,
-      position = seq_len(maxL),
-      character = c(chars, rep(NA, maxL - length(chars)))
-    )
-    
-  }))
-  
-  ribbonDat <- longSeqs %>%
-  group_by(position, character) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  filter(!is.na(character)) %>%
-  group_by(position) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(
-    position,
-    character,
-    fill = list(n = 0, proportion = 0)
-  )
-  
-  q3 <- ceiling(quantile(nchar(stringsrev), 0.75))
-  
-  p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    geom_area() +
-    scale_y_continuous(labels = scales::percent) +
-    scale_x_continuous(limits = c(0, q3)) +
-    labs(
-      x = "Position",
-      y = "Proportion",
-      fill = "State",
-      title = bird
-    ) +
-    scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
-  
-  print(p)
-  
-}
-
-```
 
 ## Prefix Tries
 
@@ -377,80 +416,13 @@ for (dat in all) {
 
 ```
 
-
-## Suffix Tries
-
-```{r suffix-tries}
-
-# trieCountsSuffix <- NULL
-# 
-# suffixLength = 15 #max prefix size to look for in trie
-# 
-# #create prefix trie for each bird, compute proportions
-# for (dat in all) {
-#   
-#   bird = dat$bird[1]
-#   dat$rev_song <- stri_reverse(unlist(dat$col_song)) 
-#   
-#   #create a prefix trie
-#   trie <- trie_create()
-#   
-#   for (song in dat$rev_song) {
-#     
-#     suffix <- str_sub(song, 1, suffixLength) #take prefix of song at prefixLength 
-#     trie_add(trie, suffix)
-#     
-#     #trie_add(trie, song) #add full song to trie instead
-#   }
-# 
-#   
-#   ends <- ls(trie@root@children) #first nodes of trie, i.e., the possible starting syllables
-#   
-#   tab <- NULL
-#   
-#   for (syl in ends) {
-#     
-#     unique_suffixes <- trie_find_prefix(trie, syl)
-#     
-#     for (suf in unique_suffixes) {
-#       
-#       temp <- data.frame(
-#         suffix = suf,
-#         count = sum(startsWith(unlist(dat$rev_song), suf)),
-#         prop = sum(startsWith(unlist(dat$rev_song), suf)) / nrow(dat),
-#         bird = bird
-#       )
-#       
-#       tab <- rbind(tab, temp)
-#       
-#     }
-#   }
-#   
-#   trieCountsSuffix <- rbind(trieCountsSuffix, tab)
-#   
-# }
-
-```
-
 ## Cropped Sequences
 
 I identified prefixes from the trie that occur in more than 10% of songs, by bird, and cropped these prefixes out of the songs.
 
 ```{r crop}
-# identify deterministic prefixes occurring more than 50% of the time
+# identify deterministic prefixes occurring more than 10% of the time
 cropTable <- trieCounts[(round(trieCounts$prop, 2)) >=.10,]
-
-# fullPrefixTable <- cropTable %>%
-#   group_by(bird) %>%
-#   mutate(normProp = prop / sum(prop)) %>%
-#   ungroup() %>%
-#   mutate(bird = recode(bird, '1' = 'bird1', '2' = 'bird2', '4' = 'bird4'))
-
-#write.csv(cropTable,"../bird-data/prefixes.csv", row.names = FALSE)
-
-
-# same for suffixes
-#cropTableSuffix <- trieCountsSuffix[(round(trieCountsSuffix$prop, 2)) >=.5,]
 
 # crop out strong prefixes in birds 1 and 4 (2 doesn't have any)
 
@@ -505,7 +477,7 @@ for (n in 1:length(all)){
 
 prefixes <- na.omit(bind_rows(lapply(all, function(df) {
   df %>%
-    select(bird, fullPrefix)   # replace with your column names
+    select(bird, fullPrefix)
 })))
 
 write.csv(prefixes,"../bird-data/prefixes.csv", row.names = FALSE)
@@ -526,8 +498,6 @@ for (dat in all){
   writeLines(unlist(dat$col_song), sprintf("../bird-data/raw/%s_collapsed.txt", bird))
   
 }
-
-
 
 ```
 
@@ -659,3 +629,182 @@ for (dat in all) {
 
 
 
+# Appendix: Suffixes in Birdsong
+
+## backwards ribbon plots collapsed
+
+```{r back-ribbons-col}
+
+# for (dat in all) {
+#   
+#   bird <- dat$bird[1]
+#   
+#   stringsrev <- stri_reverse(unlist(dat$col_song))
+#   
+#   #split strings
+#   splitStrs <- strsplit(stringsrev, "")
+#   
+#   #maximum length to pad with NAs
+#   maxL <- max(sapply(splitStrs, length))
+#   
+#   #long table
+#   longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
+#     chars <- splitStrs[[i]]
+#     
+#     tibble(
+#       string_id = i,
+#       position = seq_len(maxL),
+#       character = c(chars, rep(NA, maxL - length(chars)))
+#     )
+#     
+#   }))
+#   
+#   ribbonDat <- longSeqs %>%
+#   group_by(position, character) %>%
+#   summarise(n = n(), .groups = "drop") %>%
+#   filter(!is.na(character)) %>%
+#   group_by(position) %>%
+#   mutate(proportion = n / sum(n)) %>%
+#   ungroup() %>%
+#   complete(
+#     position,
+#     character,
+#     fill = list(n = 0, proportion = 0)
+#   )
+#   
+#   p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
+#     geom_area() +
+#     scale_y_continuous(labels = scales::percent) +
+#     scale_x_continuous(limits = c(0, 30)) +
+#     labs(
+#       x = "Position",
+#       y = "Proportion",
+#       fill = "State",
+#       title = bird
+#     ) +
+#     scale_fill_paletteer_d("rcartocolor::Prism") +
+#     theme_minimal()
+#   
+#   print(p)
+#   
+# }
+
+```
+
+## backwards ribbon plots full
+
+```{r back-ribbons-full}
+
+# for (dat in all) {
+#   
+#   bird <- dat$bird[1]
+#   
+#   stringsrev <- stri_reverse(unlist(dat$song))
+#   
+#   #split strings
+#   splitStrs <- strsplit(stringsrev, "")
+#   
+#   #maximum length to pad with NAs
+#   maxL <- max(sapply(splitStrs, length))
+#   
+#   #long table
+#   longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
+#     chars <- splitStrs[[i]]
+#     
+#     tibble(
+#       string_id = i,
+#       position = seq_len(maxL),
+#       character = c(chars, rep(NA, maxL - length(chars)))
+#     )
+#     
+#   }))
+#   
+#   ribbonDat <- longSeqs %>%
+#   group_by(position, character) %>%
+#   summarise(n = n(), .groups = "drop") %>%
+#   filter(!is.na(character)) %>%
+#   group_by(position) %>%
+#   mutate(proportion = n / sum(n)) %>%
+#   ungroup() %>%
+#   complete(
+#     position,
+#     character,
+#     fill = list(n = 0, proportion = 0)
+#   )
+#   
+#   q3 <- ceiling(quantile(nchar(stringsrev), 0.75))
+#   
+#   p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
+#     geom_area() +
+#     scale_y_continuous(labels = scales::percent) +
+#     scale_x_continuous(limits = c(0, q3)) +
+#     labs(
+#       x = "Position",
+#       y = "Proportion",
+#       fill = "State",
+#       title = bird
+#     ) +
+#     scale_fill_paletteer_d("rcartocolor::Prism") +
+#     theme_minimal()
+#   
+#   print(p)
+#   
+# }
+
+```
+
+## Suffix Tries
+
+```{r suffix-tries}
+
+# trieCountsSuffix <- NULL
+# 
+# suffixLength = 15 #max prefix size to look for in trie
+# 
+# #create prefix trie for each bird, compute proportions
+# for (dat in all) {
+#   
+#   bird = dat$bird[1]
+#   dat$rev_song <- stri_reverse(unlist(dat$col_song)) 
+#   
+#   #create a prefix trie
+#   trie <- trie_create()
+#   
+#   for (song in dat$rev_song) {
+#     
+#     suffix <- str_sub(song, 1, suffixLength) #take prefix of song at prefixLength 
+#     trie_add(trie, suffix)
+#     
+#     #trie_add(trie, song) #add full song to trie instead
+#   }
+# 
+#   
+#   ends <- ls(trie@root@children) #first nodes of trie, i.e., the possible starting syllables
+#   
+#   tab <- NULL
+#   
+#   for (syl in ends) {
+#     
+#     unique_suffixes <- trie_find_prefix(trie, syl)
+#     
+#     for (suf in unique_suffixes) {
+#       
+#       temp <- data.frame(
+#         suffix = suf,
+#         count = sum(startsWith(unlist(dat$rev_song), suf)),
+#         prop = sum(startsWith(unlist(dat$rev_song), suf)) / nrow(dat),
+#         bird = bird
+#       )
+#       
+#       tab <- rbind(tab, temp)
+#       
+#     }
+#   }
+#   
+#   trieCountsSuffix <- rbind(trieCountsSuffix, tab)
+#   
+# }
+
+
+#cropTableSuffix <- trieCountsSuffix[(round(trieCountsSuffix$prop, 2)) >=.10,]
+```
