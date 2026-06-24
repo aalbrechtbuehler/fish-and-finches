@@ -6,9 +6,9 @@ output: html_document
 ```{r}
 
 library(pacman)
-p_load(dplyr, ggplot2, papaja, tidybins)
+p_load(dplyr, ggplot2, papaja, tidybins, paletteer, patchwork)
 
-df <- read.csv("../simResults.csv")
+df <- read.csv("simResults.csv")
 
 # data wrangling
 df$nStates = as.factor(df$nStates)
@@ -19,79 +19,131 @@ df$correct <- df$k == df$trueK
 
 df <- df %>%
   mutate(
-    overunder = case_when(
-      k < trueK ~ "under",
-      k > trueK ~ "over",
-      TRUE ~ "exact"
-    )
-  )
+    overunder = case_when(k < trueK ~ -1,
+                          k > trueK ~ 1,
+                          TRUE ~ 0))
 
-#find best performing k-order by way, sim, state set size, corpus size, and dirichlet alpha
+
+#find best performing k-order by way, sim, alpha, state set size, sequence length, corpus size
 bestKs <- df %>%
-  group_by(way, sim, nStates, corpusSize, alpha) %>%
+  group_by(way, sim, alpha, nStates, seqLength, corpusSize) %>%
   slice_max(log_likelihood)
 
 # overall way accuracy by true k for reporting
 wayComparison <- aggregate(bestKs, correct ~ way, FUN = mean)
 
-# number of over/under estimates by way
+
+# number of over/under estimates by way, then recoded to be signed and proportional
 estComparison <- bestKs %>%
-  group_by(way)%>%
-  count(overunder)
+  group_by(way, trueK, k)%>%
+  count(overunder) %>%
+  ungroup() %>%
+  group_by(way, trueK)%>%
+  mutate(signed_prop = case_when(overunder == -1 ~ (-n / sum(n)),
+                                 overunder == 1  ~  (n / sum(n)),
+                                 TRUE ~ 0))
+
 
 #plot :)
 
 #true generative k by way
-ggplot(bestKs, aes(x = trueK, y = correct, group = way, color = way))+
+pK <- ggplot(bestKs, aes(x = trueK, y = correct, group = way, color = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
+  geom_hline(yintercept=.167, color = "red", linetype = 2) +
+  #annotate("text", x=.75, y=.2, label="chance performance", color = "red")+
   scale_y_continuous(limits = c(0,1))+
+  scale_x_continuous(breaks = c(0,1,2,3,4,5))+
   labs(x = "True Generative K", y = "Correct Detection", color = "Sampling Method")+
   scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
-  theme_apa()
+  theme_bw()
 
 # entropy effects by way
-ggplot(bestKs, aes(x = entropyBinned, y = correct, group = way, color = way))+
+pEnt <- ggplot(bestKs, aes(x = entropyBinned, y = correct, group = way, color = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
+  geom_hline(yintercept=.167, color = "red", linetype = 2) +
+  #annotate("text", x=2.75, y=.2, label="chance performance", color = "red")+
   scale_y_continuous(limits = c(0,1))+
   labs(x = "Binned Entropy", y = "Correct Detection", color = "Sampling Method")+
   scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
-  theme_apa()
+  theme_bw()
 
 # nstate effects by way
-ggplot(bestKs, aes(x = nStates, y = correct, group = way, color = way))+
+pState <- ggplot(bestKs, aes(x = nStates, y = correct, group = way, color = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
+  geom_hline(yintercept=.167, color = "red", linetype = 2) +
+  #annotate("text", x=1.5, y=.2, label="chance performance", color = "red")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Number of Unique States", y = "Correct Detection", color = "Sampling Method")+
+  labs(x = "Number of Unique Characters", y = "Correct Detection", color = "Sampling Method")+
   scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
-  theme_apa()
+  theme_bw()
 
-#corpus size by way
-ggplot(bestKs, aes(x = corpusSize, y = correct, group = way, color = way))+
+#corpus size by size
+pSize <- ggplot(bestKs, aes(x = corpusSize, y = correct, group = way, color = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
+  geom_hline(yintercept=.167, color = "red", linetype = 2) +
+  #annotate("text", x=175, y=.2, label="chance performance", color = "red")+
   scale_y_continuous(limits = c(0,1))+
   labs(x = "Corpus Size", y = "Correct Detection", color = "Sampling Method")+
   scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
-  theme_apa()
+  theme_bw()
+
+#sequence length effects by way
+pLength <- ggplot(bestKs, aes(x = seqLength, y = correct, group = way, color = way))+
+  stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
+  stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
+  geom_hline(yintercept=.167, color = "red", linetype = 2) +
+  #annotate("text", x=175, y=.2, label="chance performance", color = "red")+
+  scale_y_continuous(limits = c(0,1))+
+  labs(x = "String Length", y = "Correct Detection", color = "Sampling Method")+
+  scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
+  theme_bw()
+
+
+combined <- (pK | pState) /
+            (pSize | pLength) /
+            pEnt +
+  plot_layout(guides = "collect")
+
+combined
+
+palette <- paletteer_d("rcartocolor::Prism")
+
+#etimation bias by way
+ggplot(estComparison %>% filter(overunder != "exact"), aes(x = factor(trueK), y = signed_prop, group = overunder, fill = factor(k)))+
+  geom_col()+
+  facet_wrap(~way, labeller = as_labeller(c(lagged = 'Lagged', semicol = 'Collapsed')))+
+  geom_hline(yintercept = 0)+
+  scale_y_continuous(limits = c(-1, 1))+
+  labs(x = "True K", y = "Proportional Estimation Bias \n (Underestimate / Overestimate)", fill = "Predicted K")+
+  scale_fill_manual(values = palette[c(1,2,4,6,8,9)])+
+  theme_bw()
+
 
 ```
 # Sampling Results
 
 ```{r}
 
-#choose a df
 birdDF <- read.csv("../bird-data/birdResultsCropped.csv")
 fishDF <- read.csv("../fish-data/fishResults.csv")
 
+# fix a typo: mil should be mee in fish df
+fishDF <- fishDF %>%
+  mutate(species = recode(species, "mil" = "mee"))
+
 birdDF$k <- as.factor(birdDF$k)
 fishDF$k <- as.factor(fishDF$k)
+
+### fish
 
 # best performing collapsed context model over iterations
 fishMaxs <- fishDF %>%
@@ -134,10 +186,15 @@ ggplot(fishDF, aes(x = k, y = log_likelihood))+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "mediumpurple4")+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "mediumpurple4")+
   labs(x = "K-order", y = "Average LL")+
-  facet_wrap(~species)+
+  facet_wrap(~species, labeller = as_labeller(c(bre = 'N. brevis', mee = 'L. meeli', mul = 'N. multifasciatus',
+                                                oce = 'L. ocellatus', orn = 'L. ornatipinnis', pul = 'N. pulcher')))+
   geom_segment(data = fishResults, aes(x = k, xend = k, y = avgLL-.45, yend = avgLL-.15), 
                arrow = arrow(length = unit(0.2, "cm"), type = 'closed'), inherit.aes = FALSE)+
-  theme_apa()
+  theme_apa()+
+  theme(strip.text = element_text(face = "italic"))
+
+
+### birds
 
 # best performing collapsed context model over iterations
 birdMaxs <- birdDF %>%
@@ -181,7 +238,7 @@ ggplot(birdDF, aes(x = k, y = log_likelihood))+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "darkgreen")+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "darkgreen")+
   labs(x = "K-order", y = "Average LL")+
-  facet_wrap(~species)+
+  facet_wrap(~species, labeller = as_labeller(c(bird1 = 'Bird 1', bird2 = 'Bird 2', bird4 = 'Bird 4')))+
   geom_segment(data = birdResults, aes(x = k, xend = k, y = avgLL-.2, yend = avgLL-.1), 
                arrow = arrow(length = unit(0.2, "cm"), type = 'closed'), inherit.aes = FALSE)+
   theme_apa()
