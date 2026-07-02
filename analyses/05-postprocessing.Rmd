@@ -47,64 +47,69 @@ estComparison <- bestKs %>%
 #plot :)
 
 #true generative k by way
-pK <- ggplot(bestKs, aes(x = trueK, y = correct, group = way, color = way))+
+pK <- ggplot(bestKs, aes(x = trueK, y = correct, group = way, color = way, shape = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
-  geom_hline(yintercept=.167, color = "red", linetype = 2) +
+  geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
   #annotate("text", x=.75, y=.2, label="chance performance", color = "red")+
   scale_y_continuous(limits = c(0,1))+
   scale_x_continuous(breaks = c(0,1,2,3,4,5))+
-  labs(x = "True Generative K", y = "Correct Detection", color = "Sampling Method")+
-  scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
+  labs(x = "True Generative K", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
+  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
+  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
   theme_bw()
 
 # entropy effects by way
-pEnt <- ggplot(bestKs, aes(x = entropyBinned, y = correct, group = way, color = way))+
+pEnt <- ggplot(bestKs, aes(x = entropyBinned, y = correct, group = way, color = way, shape = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
-  geom_hline(yintercept=.167, color = "red", linetype = 2) +
-  #annotate("text", x=2.75, y=.2, label="chance performance", color = "red")+
+  geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
+  #annotate("text", x=2.75, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Binned Entropy", y = "Correct Detection", color = "Sampling Method")+
-  scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
+  labs(x = "Binned Entropy", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
+  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
+  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
   theme_bw()
 
 # nstate effects by way
-pState <- ggplot(bestKs, aes(x = nStates, y = correct, group = way, color = way))+
+pState <- ggplot(bestKs, aes(x = nStates, y = correct, group = way, color = way, shape = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
-  geom_hline(yintercept=.167, color = "red", linetype = 2) +
-  #annotate("text", x=1.5, y=.2, label="chance performance", color = "red")+
+  geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
+  #annotate("text", x=1.5, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Number of Unique Characters", y = "Correct Detection", color = "Sampling Method")+
-  scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
+  labs(x = "Number of Unique Characters", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
+  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
+  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
   theme_bw()
 
 #corpus size by size
-pSize <- ggplot(bestKs, aes(x = corpusSize, y = correct, group = way, color = way))+
+pSize <- ggplot(bestKs, aes(x = corpusSize, y = correct, group = way, color = way, shape = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
-  geom_hline(yintercept=.167, color = "red", linetype = 2) +
-  #annotate("text", x=175, y=.2, label="chance performance", color = "red")+
+  geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
+  #annotate("text", x=175, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Corpus Size", y = "Correct Detection", color = "Sampling Method")+
-  scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
+  labs(x = "Corpus Size", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
+  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
+  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
   theme_bw()
 
 #sequence length effects by way
-pLength <- ggplot(bestKs, aes(x = seqLength, y = correct, group = way, color = way))+
+pLength <- ggplot(bestKs, aes(x = seqLength, y = correct, group = way, color = way, shape = way))+
   stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
-  geom_hline(yintercept=.167, color = "red", linetype = 2) +
-  #annotate("text", x=175, y=.2, label="chance performance", color = "red")+
+  geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
+  #annotate("text", x=175, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "String Length", y = "Correct Detection", color = "Sampling Method")+
-  scale_color_manual(values = c("darkblue", "orange2"), labels = c("Lagged", "Collapsed"))+
+  labs(x = "String Length", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
+  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
+  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
   theme_bw()
 
 
@@ -124,6 +129,7 @@ ggplot(estComparison %>% filter(overunder != "exact"), aes(x = factor(trueK), y 
   geom_hline(yintercept = 0)+
   scale_y_continuous(limits = c(-1, 1))+
   labs(x = "True K", y = "Proportional Estimation Bias \n (Underestimate / Overestimate)", fill = "Predicted K")+
+  #scale_fill_viridis_d(option = "D", direction = -1)+
   scale_fill_manual(values = palette[c(1,2,4,6,8,9)])+
   theme_bw()
 
@@ -171,7 +177,7 @@ fishResults <- fishMaxs %>%
     fishMaxs %>%
       count(species, k, smoother) %>%
       group_by(species, k) %>%
-      slice_max(n, n = 1, with_ties = FALSE) %>%
+      slice_max(n, n = 1, with_ties = T) %>%
       ungroup() %>%
       select(species, k, smoother),
     by = c("species", "k")
@@ -182,9 +188,9 @@ fullFishResults <- fishMaxs %>%
   count(species, k, sort = TRUE)
 
 ggplot(fishDF, aes(x = k, y = log_likelihood))+
-  stat_summary(geom = 'bar', position = 'identity', fun = 'mean', fill = "mediumpurple3")+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "mediumpurple4")+
-  stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "mediumpurple4")+
+  stat_summary(geom = 'bar', position = 'identity', fun = 'mean', fill = "#be5947")+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "gray25")+
+  stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "gray25")+
   labs(x = "K-order", y = "Average LL")+
   facet_wrap(~species, labeller = as_labeller(c(bre = 'N. brevis', mee = 'L. meeli', mul = 'N. multifasciatus',
                                                 oce = 'L. ocellatus', orn = 'L. ornatipinnis', pul = 'N. pulcher')))+
@@ -234,9 +240,9 @@ fullbirdResults <- birdMaxs %>%
   count(species, k, sort = TRUE)
 
 ggplot(birdDF, aes(x = k, y = log_likelihood))+
-  stat_summary(geom = 'bar', position = 'identity', fun = 'mean', fill = "green4")+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "darkgreen")+
-  stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "darkgreen")+
+  stat_summary(geom = 'bar', position = 'identity', fun = 'mean', fill = "#be5947")+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "gray25")+
+  stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "gray25")+
   labs(x = "K-order", y = "Average LL")+
   facet_wrap(~species, labeller = as_labeller(c(bird1 = 'Bird 1', bird2 = 'Bird 2', bird4 = 'Bird 4')))+
   geom_segment(data = birdResults, aes(x = k, xend = k, y = avgLL-.2, yend = avgLL-.1), 
