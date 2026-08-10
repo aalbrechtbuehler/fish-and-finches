@@ -244,7 +244,7 @@ ggplot(birdDF, aes(x = k, y = log_likelihood))+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "gray25")+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "gray25")+
   labs(x = "K-order", y = "Average LL")+
-  facet_wrap(~species, labeller = as_labeller(c(bird1 = 'Bird 1', bird2 = 'Bird 2', bird4 = 'Bird 4')))+
+  facet_wrap(~species, labeller = as_labeller(c(bird1 = 'Bird 1', bird2 = 'Bird 2', bird3 = 'Bird 3', bird4 = 'Bird 4', bird5 = 'Bird 5', bird6 = 'Bird 6')))+
   geom_segment(data = birdResults, aes(x = k, xend = k, y = avgLL-.2, yend = avgLL-.1), 
                arrow = arrow(length = unit(0.2, "cm"), type = 'closed'), inherit.aes = FALSE)+
   theme_apa()
