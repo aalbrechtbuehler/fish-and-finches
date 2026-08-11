@@ -9,6 +9,7 @@ output:
 
 library(pacman)
 p_load(tidyverse, readr, tidyr, dplyr, paletteer, reasytries, strs, stringi, stringr, purrr, xtable, patchwork)
+set.seed(123)
 
 ```
 
@@ -218,60 +219,9 @@ bird6 <- read.csv("../bird-data/raw/bird_6_df.csv")
 bird1$bird <- "bird1"
 bird2$bird <- "bird2"
 bird4$bird <- "bird4"
-
 bird3$bird <- "bird3"
 bird5$bird <- "bird5"
 bird6$bird <- "bird6"
-
-#songs collapsed by repeats (e.g., "aaaabbbbccdddddccc" = "abcdc") to look at higher order patterns
-bird1$col_song <- lapply(bird1$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
-bird2$col_song <- lapply(bird2$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
-bird3$col_song <- lapply(bird3$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
-bird4$col_song <- lapply(bird4$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
-bird5$col_song <- lapply(bird5$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
-bird6$col_song <- lapply(bird6$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
-
-#---
-#useful descriptive stats
-statsTable <- data.frame(bird = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
-                         nSeq = c(nrow(bird1), nrow(bird2), nrow(bird3), nrow(bird4), nrow(bird5), nrow(bird6)),
-                         full_q3s = c(ceiling(quantile(nchar(bird1$song), 0.75)),
-                                      ceiling(quantile(nchar(bird2$song), 0.75)),
-                                      ceiling(quantile(nchar(bird3$song), 0.75)),
-                                      ceiling(quantile(nchar(bird4$song), 0.75)),
-                                      ceiling(quantile(nchar(bird5$song), 0.75)),
-                                      ceiling(quantile(nchar(bird6$song), 0.75))),
-                         col_q3s = c(ceiling(quantile(nchar(bird1$col_song), 0.75)),
-                                     ceiling(quantile(nchar(bird2$col_song), 0.75)),
-                                     ceiling(quantile(nchar(bird3$col_song), 0.75)),
-                                     ceiling(quantile(nchar(bird4$col_song), 0.75)),
-                                     ceiling(quantile(nchar(bird5$col_song), 0.75)),
-                                     ceiling(quantile(nchar(bird6$col_song), 0.75))),
-                         full_q1s = c(ceiling(quantile(nchar(bird1$song), 0.25)),
-                                      ceiling(quantile(nchar(bird2$song), 0.25)),
-                                      ceiling(quantile(nchar(bird3$song), 0.25)),
-                                      ceiling(quantile(nchar(bird4$song), 0.25)),
-                                      ceiling(quantile(nchar(bird5$song), 0.25)),
-                                      ceiling(quantile(nchar(bird6$song), 0.25))),
-                         col_q1s = c(ceiling(quantile(nchar(bird1$col_song), 0.25)),
-                                     ceiling(quantile(nchar(bird2$col_song), 0.25)),
-                                     ceiling(quantile(nchar(bird3$col_song), 0.25)),
-                                     ceiling(quantile(nchar(bird4$col_song), 0.25)),
-                                     ceiling(quantile(nchar(bird5$col_song), 0.25)),
-                                     ceiling(quantile(nchar(bird6$col_song), 0.25))),
-                         full_max = c(max(nchar(bird1$song)),
-                                      max(nchar(bird2$song)),
-                                      max(nchar(bird3$song)),
-                                      max(nchar(bird4$song)),
-                                      max(nchar(bird5$song)),
-                                      max(nchar(bird6$song))),
-                         col_max = c(max(nchar(bird1$col_song)),
-                                     max(nchar(bird2$col_song)),
-                                     max(nchar(bird3$col_song)),
-                                     max(nchar(bird4$col_song)),
-                                     max(nchar(bird5$col_song)),
-                                     max(nchar(bird6$col_song)))
-                         )
 
 #unique syllables by bird
 b1_syll <- unique(unlist(strsplit(bird1$song, "")))
@@ -282,160 +232,189 @@ b5_syll <- unique(unlist(strsplit(bird5$song, "")))
 b6_syll <- unique(unlist(strsplit(bird6$song, "")))
 
 #---
+
+#---
 #all together
 all <- list("1" = bird1, "2" = bird2, "3" = bird3, "4" = bird4, "5" = bird5, "6" = bird6)
 
+#number of characters rotated
+n <- 10
+
+#target syllable to rotate from second instance, for each bird
+targets <- c('a', 'c', 'i', 'b', 'b', 'h')
+
+for (i in 1:length(all)) {
+  
+  dat <- all[[i]]
+  
+  #collapsed song
+  dat$col_song <- lapply(dat$song, function(x) paste(rle(unlist(strsplit(x,"")))$values, collapse = ""))
+  
+  #reversed song (for suffixes)
+  dat$rev_song <- lapply(dat$col_song, function(x) stri_reverse(unlist(x)))
+  
+  #random collapsed song
+  dat$random_song <- sapply(dat$col_song, function(x) {paste0(sample(strsplit(x, "")[[1]]), collapse = "")})
+  
+  #nth-character rotated collapsed song
+  dat$n_rot_song <- sapply(dat$col_song, function(x) {
+    chars <- strsplit(x, "")[[1]]
+    
+    if (length(chars) < n) {
+      return(NA)
+    }
+    
+    paste0(
+      paste0(chars[n:length(chars)], collapse = ""),
+      paste0(chars[1:(n - 1)], collapse = "")
+    )
+  })
+  
+  #third instance of syllable rotated collapsed song
+  target <- targets[i]
+  
+  dat$syll_rot_song <- sapply(dat$col_song, function(x) {
+    chars <- strsplit(x, "")[[1]]
+    positions <- which(chars == target)
+    
+    if (length(positions) < 3) {
+      return(NA)
+    }
+    
+    pos <- positions[3]
+    paste0(
+      paste0(chars[pos:length(chars)], collapse = ""),
+      paste0(chars[1:(pos - 1)], collapse = "")
+    )
+  })
+  
+  all[[i]] <- dat
+  
+}
+
+statsTable <- data.frame(bird = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
+                          nSeq = c(nrow(all[[1]]), nrow(all[[2]]), nrow(all[[3]]), nrow(all[[4]]), nrow(all[[5]]), nrow(all[[6]])),
+                          full_q1s = c(ceiling(quantile(nchar(all[[1]]$song), 0.25)),
+                                       ceiling(quantile(nchar(all[[2]]$song), 0.25)),
+                                       ceiling(quantile(nchar(all[[3]]$song), 0.25)),
+                                       ceiling(quantile(nchar(all[[4]]$song), 0.25)),
+                                       ceiling(quantile(nchar(all[[5]]$song), 0.25)),
+                                       ceiling(quantile(nchar(all[[6]]$song), 0.25))),
+                          full_q3s = c(ceiling(quantile(nchar(all[[1]]$song), 0.75)),
+                                       ceiling(quantile(nchar(all[[2]]$song), 0.75)),
+                                       ceiling(quantile(nchar(all[[3]]$song), 0.75)),
+                                       ceiling(quantile(nchar(all[[4]]$song), 0.75)),
+                                       ceiling(quantile(nchar(all[[5]]$song), 0.75)),
+                                       ceiling(quantile(nchar(all[[6]]$song), 0.75))),
+                          full_maxs = c(max(nchar(all[[1]]$song)),
+                                      max(nchar(all[[2]]$song)),
+                                      max(nchar(all[[3]]$song)),
+                                      max(nchar(all[[4]]$song)),
+                                      max(nchar(all[[5]]$song)),
+                                      max(nchar(all[[6]]$song))),
+                          col_q1s = c(ceiling(quantile(nchar(all[[1]]$col_song), 0.25)),
+                                       ceiling(quantile(nchar(all[[2]]$col_song), 0.25)),
+                                       ceiling(quantile(nchar(all[[3]]$col_song), 0.25)),
+                                       ceiling(quantile(nchar(all[[4]]$col_song), 0.25)),
+                                       ceiling(quantile(nchar(all[[5]]$col_song), 0.25)),
+                                       ceiling(quantile(nchar(all[[6]]$col_song), 0.25))),
+                          col_q3s = c(ceiling(quantile(nchar(all[[1]]$col_song), 0.75)),
+                                       ceiling(quantile(nchar(all[[2]]$col_song), 0.75)),
+                                       ceiling(quantile(nchar(all[[3]]$col_song), 0.75)),
+                                       ceiling(quantile(nchar(all[[4]]$col_song), 0.75)),
+                                       ceiling(quantile(nchar(all[[5]]$col_song), 0.75)),
+                                       ceiling(quantile(nchar(all[[6]]$col_song), 0.75))), 
+                          col_maxs = c(max(nchar(all[[1]]$col_song)),
+                                      max(nchar(all[[2]]$col_song)),
+                                      max(nchar(all[[3]]$col_song)),
+                                      max(nchar(all[[4]]$col_song)),
+                                      max(nchar(all[[5]]$col_song)),
+                                      max(nchar(all[[6]]$col_song)))
+                          )
 ```
 
 ## Ribbon Plots
 
-One of the most important assumptions that my previous Markov sampling methods make is that of stationarity, i.e., the marginal state probability distribution remains constant over time. My methods compile transition probability tables over entire sequences, and lose any temporal information about transition probabilities. This works when sequences do not have a temporal element, but from a quick visual inspection, you can see this is NOT the case with these birds' songs--instead, there are common introductory sequences that are only present at the beginning of sequences. I generated these ribbon plots, which track the marginal state distributions by each time point, both for the full song version and the collapsed song version (where self-transitions are removed). 
+One of the most important assumptions that my previous Markov sampling methods make is that of stationarity, i.e., the marginal state probability distribution remains constant over the length of the sequence. My methods compile transition probability tables over entire sequences, and lose any temporal information about transition probabilities. This works when sequences do not have a temporal element, but from a quick visual inspection, you can see this is NOT the case with these birds' songs--instead, there are common introductory sequences that are only present at the beginning of sequences. I generated these ribbon plots, which track the marginal state distributions by each time point, both for the full song version and the collapsed song version (where self-transitions are removed). 
 
-You can see that especially for birds 1 and 4, there are strong regularities at the beginning of the plots, where each time step is dominated by one syllable. But after this, the state distributions even out. My intuition is that these songs can be viewed as two parts: one highly structured introductory sequence that rarely changes, and then afterwards a sequence that can be modeled by a Markov chain. However, I need to find a way to identify these regularities in a systematic rather than by eye. I decided to do this using an old technique from computer science: prefix tries!
+You can see that there are strong regularities at the beginning of the plots, where each sequence position is dominated by one syllable. But after this, the state distributions even out. My intuition is that these songs can be viewed as two parts: one highly structured introductory sequence that rarely changes, and then afterwards a sequence that can be modeled by a Markov chain. However, I need to find a way to identify these regularities in a systematic rather than by eye. I decided to do this using an old technique from computer science: prefix tries!
 
-### collapsed songs
-```{r ribbons-col}
+Sanity checks for prefix identification:
+[] random shuffling (random position per sequence)
+[] nth occurence of syllable x in each sequence
+[] position n in each sequence
+  [] tagging intro to end should roughly reintroduce deterministic sequence later in ribbon plot?
 
-titleMap <- data.frame(old = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
-                       new = c('Bird 1', 'Bird 2', 'Bird 3', 'Bird 4', 'Bird 5', 'Bird 6'))
+```{r ribbons}
 
-plot_list <- list()
+titleMap <- data.frame(
+  old = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
+  new = c('Bird 1', 'Bird 2', 'Bird 3', 'Bird 4', 'Bird 5', 'Bird 6')
+)
 
-for (dat in all) {
+for (col in c(2, 4, 5, 6, 7, 8)) {
+  #for full song, collapsed song, reversed song, random song, n-rotated song, and syll-rotated song
   
-  bird <- dat$bird[1]
+  plot_list <- list()
   
-  strings <- unlist(dat$col_song)
-  
-  #split strings
-  splitStrs <- strsplit(strings, "")
-  
-  #maximum length to pad with NAs
-  maxL <- max(sapply(splitStrs, length))
-  
-  #long table of syllable by timepoint by sequence
-  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
-    chars <- splitStrs[[i]]
+  for (dat in all) {
+    bird <- dat$bird[1]
     
-    tibble(
-      string_id = i,
-      position = seq_len(maxL),
-      character = c(chars, rep(NA, maxL - length(chars)))
-    )
+    strings <- unlist(dat[, col])
     
-  }))
+    #split strings
+    splitStrs <- strsplit(strings, "")
+    
+    #maximum length to pad with NAs
+    maxL <- max(sapply(splitStrs, length))
+    
+    #long table of syllable by timepoint by sequence
+    longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
+      chars <- splitStrs[[i]]
+      
+      tibble(
+        string_id = i,
+        position = seq_len(maxL),
+        character = c(chars, rep(NA, maxL - length(chars)))
+      )
+      
+    }))
+    
+    ribbonDat <- longSeqs %>%
+      group_by(position, character) %>%
+      summarise(n = n(), .groups = "drop") %>%
+      filter(!is.na(character)) %>%
+      group_by(position) %>%
+      mutate(proportion = n / sum(n)) %>%
+      ungroup() %>%
+      complete(position, character, fill = list(n = 0, proportion = 0))
+    
+    q3 <- ceiling(quantile(nchar(strings), 0.75, na.rm = TRUE)) #use q3 length as cut-off point because sequences are variable length, and long outlier sequences heavily bias end of ribbon plot
+    
+    plot_list[[bird]] <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
+      #geom_col(width = 1) +
+      geom_area() +
+      scale_y_continuous(labels = scales::percent) +
+      coord_cartesian(xlim = c(0, q3)) +
+      labs(
+        x = "Position",
+        y = "Proportion",
+        fill = "State",
+        title = titleMap$new[titleMap$old == bird]
+      ) +
+      scale_fill_paletteer_d("rcartocolor::Prism") +
+      theme_minimal()
+    
+  }
   
-  ribbonDat <- longSeqs %>%
-  group_by(position, character) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  filter(!is.na(character)) %>%
-  group_by(position) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(
-    position,
-    character,
-    fill = list(n = 0, proportion = 0)
-  )
+  combined_plot <-
+    wrap_plots(plot_list, ncol = 2)
   
-  q3 <- ceiling(quantile(nchar(strings), 0.75)) #use q3 length as cut-off point because sequences are variable length, and long outlier sequences heavily bias end of ribbon plot
-  
-  plot_list[[bird]] <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    #geom_col(width = 1) +
-    geom_area()+
-    scale_y_continuous(labels = scales::percent) +
-    coord_cartesian(xlim = c(0, q3))+
-    labs(
-      x = "Position",
-      y = "Proportion",
-      fill = "State",
-      title = titleMap$new[titleMap$old == bird]
-    ) +
-    scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
+  print(combined_plot)
   
 }
 
-combined_plot <-
-  wrap_plots(plot_list, ncol =2)
-
-combined_plot
-
 ```
-
-### full songs
-
-```{r ribbons-full}
-
-titleMap <- data.frame(old = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
-                       new = c('Bird 1', 'Bird 2', 'Bird 3', 'Bird 4', 'Bird 5', 'Bird 6'))
-
-
-plot_list <- list()
-
-for (dat in all) {
-  
-  bird <- dat$bird[1]
-  
-  strings <- unlist(dat$song)
-  
-  #split strings
-  splitStrs <- strsplit(strings, "")
-  
-  #maximum length to pad with NAs
-  maxL <- max(sapply(splitStrs, length))
-  
-  #long table
-  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
-    chars <- splitStrs[[i]]
-    
-    tibble(
-      string_id = i,
-      position = seq_len(maxL),
-      character = c(chars, rep(NA, maxL - length(chars)))
-    )
-    
-  }))
-  
-  ribbonDat <- longSeqs %>%
-  group_by(position, character) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  filter(!is.na(character)) %>%
-  group_by(position) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(
-    position,
-    character,
-    fill = list(n = 0, proportion = 0)
-  )
-  
-  q3 <- ceiling(quantile(nchar(strings), 0.75))
-  
-  plot_list[[bird]] <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    #geom_col(width = 1) +
-    geom_area()+
-    scale_y_continuous(labels = scales::percent) +
-    coord_cartesian(xlim = c(0, q3))+
-    labs(
-      x = "Position",
-      y = "Proportion",
-      fill = "State",
-      title = titleMap$new[titleMap$old == bird]
-    ) +
-    scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
-
-}
-
-combined_plot <-
-  wrap_plots(plot_list, ncol = 2)
-
-combined_plot
-```
-
-
-
 
 
 ## Prefix Tries
@@ -448,62 +427,68 @@ For reference: https://en.wikipedia.org/wiki/Trie
 
 trieCounts <- NULL
 
-prefixLength = 40 #max prefix size to look for in trie, judged by longest ribbon plot regularities in all birds (~20 from Bird 1)
-
-#create prefix trie for each bird, compute proportions
-for (dat in all) {
+prefixLength = 40 #max prefix size to look for in trie, judged by longest ribbon plot regularities in all birds and all types of songs (this doesn't really matter as long as the search window is large enough)
+for (col in c(4, 5, 6, 7, 8)) {
+#for (col in c(8)) {
   
-  bird = dat$bird[1]
-  
-  #create a prefix trie
-  trie <- trie_create()
-  
-  for (song in dat$col_song) {
+  #create prefix trie for each bird, compute proportions
+  for (dat in all) {
     
-    prefix <- str_sub(song, 1, prefixLength) #take prefix of song at prefixLength 
-    trie_add(trie, prefix)
+    bird = dat$bird[1]
     
-    #trie_add(trie, song) #add full song to trie instead
-  }
-
-  
-  starts <- ls(trie@root@children) #first nodes of trie, i.e., the possible starting syllables
-  
-  tab <- NULL
-  
-  for (syl in starts) {
+    #create a prefix trie
+    trie <- trie_create()
     
-    unique_prefixes <- trie_find_prefix(trie, syl)
-    
-    for (pre in unique_prefixes) {
+    for (song in dat[, col]) {
       
-      temp <- data.frame(
-        prefix = pre,
-        count = sum(startsWith(unlist(dat$col_song), pre)),
-        prop = sum(startsWith(unlist(dat$col_song), pre)) / nrow(dat),
-        bird = bird
-      )
+      if (is.na(song))
+        next
       
-      tab <- rbind(tab, temp)
+      prefix <- str_sub(song, 1, prefixLength) #take prefix of song at prefixLength
+      trie_add(trie, prefix)
       
+      #trie_add(trie, song) #add full song to trie instead
     }
+    
+    starts <- ls(trie@root@children) #first nodes of trie, i.e., the possible starting syllables
+    
+    tab <- NULL
+    
+    for (syl in starts) {
+      unique_prefixes <- trie_find_prefix(trie, syl)
+      
+      for (pre in unique_prefixes) {
+        temp <- data.frame(
+          prefix = pre,
+          count = sum(startsWith(unlist(dat[, col]), pre), na.rm = T),
+          prop = sum(startsWith(unlist(dat[, col]), pre), na.rm = T) / sum(!is.na(dat[,col])),
+          bird = bird,
+          type = col
+        )
+        
+        tab <- rbind(tab, temp)
+        
+      }
+    }
+    
+    trieCounts <- rbind(trieCounts, tab)
+    
   }
-  
-  trieCounts <- rbind(trieCounts, tab)
-  
 }
+
+trieCounts$type <- recode(trieCounts$type, '4' = "collapsed", '5' = 'reversed', '6' = "random", '7' = "n-rot", '8' = "syll-rot")
 
 ```
 
 ## Cropped Sequences
 
-I identified prefixes from the trie that occur in more than 20% of songs, by bird, and cropped these prefixes out of the songs.
+I identified prefixes from the trie that occur in more than 10% of songs, by bird, and cropped these prefixes out of the songs.
 
 ```{r crop}
 # identify deterministic prefixes occurring more than 20% of the time
 cropTable <- trieCounts[(round(trieCounts$prop, 3)) >=.100,]
 
-# crop out strong prefixes 
+# crop out strong prefixes in normal songs
 
 for (n in 1:length(all)){
   
@@ -515,7 +500,7 @@ for (n in 1:length(all)){
     song <- unlist(dat$song[i])
     
     bird <- dat$bird[1]
-    birdTable <- cropTable[cropTable$bird == bird,]
+    birdTable <- cropTable[cropTable$bird == bird & cropTable$type == "collapsed",] #only use the normal collapsed prefixes
     
     #map which prefixes are present in song (vector is organized in alphabetically ordered nested prefixes, smallest size to longest size)
     bool <- as.integer(startsWith(col_song, birdTable$prefix))
@@ -562,10 +547,8 @@ prefixes <- na.omit(bind_rows(lapply(all, function(df) {
     select(bird, fullPrefix)
 })))
 
-#write.csv(prefixes,"../bird-data/prefixes.csv", row.names = FALSE)
-
-
-croppedStats <- data.frame(q1 = c(ceiling(quantile(nchar(all[[1]]$cropped_song), .25)),
+croppedStats <- data.frame(bird = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
+                           q1 = c(ceiling(quantile(nchar(all[[1]]$cropped_song), .25)),
                                   ceiling(quantile(nchar(all[[2]]$cropped_song), .25)),
                                   ceiling(quantile(nchar(all[[3]]$cropped_song), .25)),
                                   ceiling(quantile(nchar(all[[4]]$cropped_song), .25)),
@@ -583,9 +566,11 @@ croppedStats <- data.frame(q1 = c(ceiling(quantile(nchar(all[[1]]$cropped_song),
 
 ```
 
-## Save corpora
+### Save corpora
 
 ```{r save}
+
+write.csv(prefixes,"../bird-data/prefixes.csv", row.names = FALSE)
 
 for (dat in all){
   
@@ -600,11 +585,11 @@ for (dat in all){
 
 ```
 
-## Cropped Ribbon Plots
+### Cropped Ribbon Plots
 
 Then I generated ribbon plots again of the cropped sequences. As you can see, they are much more stable! I am pretty confident that this section of the songs can be modeled well by my Markov chains. 
 
-### cropped full
+#### cropped full
 
 ```{r crop-rib}
 
@@ -674,7 +659,7 @@ combined_plot <-
 combined_plot
 ```
 
-### cropped collapsed
+#### cropped collapsed
 
 ```{r crop-rib-col}
 
@@ -737,194 +722,7 @@ for (dat in all) {
 
 
 
-# Appendix 1: Suffixes in Birdsong
 
-(I also wanted to see whether there were regularities at the ends of songs, like suffixes. These patterns are not as strong and further trie analyses did not identify anything particularly strong)
-
-## backwards ribbon plots collapsed
-
-```{r back-ribbons-col}
-
-for (dat in all) {
-
-  bird <- dat$bird[1]
-
-  stringsrev <- stri_reverse(unlist(dat$col_song))
-
-  #split strings
-  splitStrs <- strsplit(stringsrev, "")
-
-  #maximum length to pad with NAs
-  maxL <- max(sapply(splitStrs, length))
-
-  #long table
-  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
-    chars <- splitStrs[[i]]
-
-    tibble(
-      string_id = i,
-      position = seq_len(maxL),
-      character = c(chars, rep(NA, maxL - length(chars)))
-    )
-
-  }))
-
-  ribbonDat <- longSeqs %>%
-  group_by(position, character) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  filter(!is.na(character)) %>%
-  group_by(position) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(
-    position,
-    character,
-    fill = list(n = 0, proportion = 0)
-  )
-
-  p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    geom_area() +
-    scale_y_continuous(labels = scales::percent) +
-    scale_x_continuous(limits = c(0, 30)) +
-    labs(
-      x = "Position",
-      y = "Proportion",
-      fill = "State",
-      title = bird
-    ) +
-    scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
-
-  print(p)
-
-}
-
-```
-
-## backwards ribbon plots full
-
-```{r back-ribbons-full}
-
-for (dat in all) {
-
-  bird <- dat$bird[1]
-
-  stringsrev <- stri_reverse(unlist(dat$song))
-
-  #split strings
-  splitStrs <- strsplit(stringsrev, "")
-
-  #maximum length to pad with NAs
-  maxL <- max(sapply(splitStrs, length))
-
-  #long table
-  longSeqs <- bind_rows(lapply(seq_along(splitStrs), function(i) {
-    chars <- splitStrs[[i]]
-
-    tibble(
-      string_id = i,
-      position = seq_len(maxL),
-      character = c(chars, rep(NA, maxL - length(chars)))
-    )
-
-  }))
-
-  ribbonDat <- longSeqs %>%
-  group_by(position, character) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  filter(!is.na(character)) %>%
-  group_by(position) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(
-    position,
-    character,
-    fill = list(n = 0, proportion = 0)
-  )
-
-  q3 <- ceiling(quantile(nchar(stringsrev), 0.75))
-
-  p <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    geom_area() +
-    scale_y_continuous(labels = scales::percent) +
-    scale_x_continuous(limits = c(0, q3)) +
-    labs(
-      x = "Position",
-      y = "Proportion",
-      fill = "State",
-      title = bird
-    ) +
-    scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
-
-  print(p)
-
-}
-
-```
-
-## Suffix Tries
-
-```{r suffix-tries}
-
-trieCountsSuffix <- NULL
-
-suffixLength = 25 #max prefix size to look for in trie
-
-#create prefix trie for each bird, compute proportions
-for (dat in all) {
-
-  bird = dat$bird[1]
-  dat$rev_song <- stri_reverse(unlist(dat$col_song))
-
-  #create a prefix trie
-  trie <- trie_create()
-
-  for (song in dat$rev_song) {
-
-    suffix <- str_sub(song, 1, suffixLength) #take prefix of song at prefixLength
-    trie_add(trie, suffix)
-
-    #trie_add(trie, song) #add full song to trie instead
-  }
-
-
-  ends <- ls(trie@root@children) #first nodes of trie, i.e., the possible starting syllables
-
-  tab <- NULL
-
-  for (syl in ends) {
-
-    unique_suffixes <- trie_find_prefix(trie, syl)
-
-    for (suf in unique_suffixes) {
-
-      temp <- data.frame(
-        suffix = suf,
-        count = sum(startsWith(unlist(dat$rev_song), suf)),
-        prop = sum(startsWith(unlist(dat$rev_song), suf)) / nrow(dat),
-        bird = bird
-      )
-
-      tab <- rbind(tab, temp)
-
-    }
-  }
-
-  trieCountsSuffix <- rbind(trieCountsSuffix, tab)
-
-}
-
-
-cropTableSuffix <- trieCountsSuffix[(round(trieCountsSuffix$prop, 2)) >=.10,]
-```
-
-# Appendix 2: Arbitrary Tries
-
-[] random shuffling (random position per sequence)
-[] nth occurence of syllable x in each sequence
-[] position n in each sequence
-  [] tagging intro to end should roughly reintroduce deterministic sequence later in ribbon plot
 
 
 

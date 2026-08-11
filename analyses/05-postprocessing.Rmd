@@ -251,3 +251,7 @@ ggplot(birdDF, aes(x = k, y = log_likelihood))+
 
 ```
 
+
+
+# Distribution Checks
+check how the length and syllable distributions compare between empirical and generated sequences for both fish and birds
