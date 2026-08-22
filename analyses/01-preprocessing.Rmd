@@ -9,7 +9,6 @@ output:
 
 library(pacman)
 p_load(tidyverse, readr, tidyr, dplyr, paletteer, reasytries, strs, stringi, stringr, purrr, xtable, patchwork)
-set.seed(123)
 
 ```
 
@@ -44,7 +43,9 @@ expanded$col_series <- lapply(expanded$series, function(x) paste(rle(unlist(strs
 statsTable <- expanded%>%
   group_by(species)%>%
   summarise(nSeq = n(),
+             full_q1s = ceiling(quantile(nchar(series), 0.25)),
              full_q3s = ceiling(quantile(nchar(series), 0.75)),
+             col_q1s =  ceiling(quantile(nchar(col_series), 0.25)),
              col_q3s =  ceiling(quantile(nchar(col_series), 0.75)),
              fullMax = max(nchar(series)),
              colMax = max(nchar(col_series))
@@ -59,7 +60,7 @@ statsTable <- expanded%>%
 ```{r}
 
 titleMap <- data.frame(old = c('bre', 'mee', 'mul', 'oce', 'orn', 'pul'),
-                       new = c('N. brevis', 'L. meeli', 'N. multifasciatus', 'L. ocellatus', 'L. ornatipinnis', 'N. pulcher'))
+                       new = c('N. brevis', 'N. meeli', 'N. multifasciatus', 'L. ocellatus', 'L. ornatipinnis', 'N. pulcher'))
 
 plot_list <- list()
 
@@ -103,7 +104,8 @@ for (fish in speciesList) {
   q3 <- ceiling(quantile(nchar(strings), 0.75)) #use q3 length as cut-off point because sequences are variable length, and long outlier sequences heavily bias end of ribbon plot
   
   plot_list[[fish]] <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
-    geom_col(width = 1) +
+    #geom_col(width = 1) +
+    geom_area() +
     scale_y_continuous(labels = scales::percent) +
     coord_cartesian(xlim = c(0, q3))+
     labs(
@@ -113,13 +115,21 @@ for (fish in speciesList) {
       title = titleMap$new[titleMap$old == fish]
     ) +
     scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
+    theme_minimal()+
+    theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        #text = element_text(family = "Times New Roman"), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line())
   
 }
 
 combined_plot <-
-  wrap_plots(plot_list, ncol = 2) +
-  plot_layout(guides = "collect")
+  wrap_plots(plot_list, ncol = 3, guides = 'collect', axis_titles = 'collect')
 
 combined_plot
 ```
@@ -133,7 +143,7 @@ combined_plot
 ```{r}
 
 titleMap <- data.frame(old = c('bre', 'mee', 'mul', 'oce', 'orn', 'pul'),
-                       new = c('N. brevis', 'L. meeli', 'N. multifasciatus', 'L. ocellatus', 'L. ornatipinnis', 'N. pulcher'))
+                       new = c('N. brevis', 'N. meeli', 'N. multifasciatus', 'L. ocellatus', 'L. ornatipinnis', 'N. pulcher'))
 
 plot_list <- list()
 
@@ -179,6 +189,7 @@ for (fish in speciesList) {
   plot_list[[fish]] <- ggplot(ribbonDat, aes(x = position, y = proportion, fill = character)) +
     geom_col(width = 1) +
     scale_y_continuous(labels = scales::percent) +
+    #scale_x_discrete(breaks = c(0, 500, 1000, 1500, 2000))+
     coord_cartesian(xlim = c(0, q3))+
     labs(
       x = "Position",
@@ -187,15 +198,27 @@ for (fish in speciesList) {
       title = titleMap$new[titleMap$old == fish]
     ) +
     scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
+    theme_minimal()+
+    theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        #text = element_text(family = "Times New Roman"), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line())
   
 }
 
 combined_plot <-
-  wrap_plots(plot_list, ncol = 2) +
-  plot_layout(guides = "collect")
+  wrap_plots(plot_list, ncol = 3, guides = "collect", axes = 'collect_y', axis_titles = 'collect')+
+  plot_annotation(title = "Full Sequences", 
+                    theme = theme(plot.title = element_text(size = 25, face = "bold", hjust = 0.5)))
 
-combined_plot
+#combined_plot
+
+ggsave("../plots/fishCombined.jpg", combined_plot, width = 18, height = 6, create.dir = T)
 ```
 
 
@@ -240,7 +263,7 @@ all <- list("1" = bird1, "2" = bird2, "3" = bird3, "4" = bird4, "5" = bird5, "6"
 #number of characters rotated
 n <- 10
 
-#target syllable to rotate from second instance, for each bird
+#target syllable to rotate from third instance, for each bird (chosen because they are common syllables that appear throughout most strings)
 targets <- c('a', 'c', 'i', 'b', 'b', 'h')
 
 for (i in 1:length(all)) {
@@ -254,6 +277,7 @@ for (i in 1:length(all)) {
   dat$rev_song <- lapply(dat$col_song, function(x) stri_reverse(unlist(x)))
   
   #random collapsed song
+  set.seed(123)
   dat$random_song <- sapply(dat$col_song, function(x) {paste0(sample(strsplit(x, "")[[1]]), collapse = "")})
   
   #nth-character rotated collapsed song
@@ -340,16 +364,20 @@ One of the most important assumptions that my previous Markov sampling methods m
 You can see that there are strong regularities at the beginning of the plots, where each sequence position is dominated by one syllable. But after this, the state distributions even out. My intuition is that these songs can be viewed as two parts: one highly structured introductory sequence that rarely changes, and then afterwards a sequence that can be modeled by a Markov chain. However, I need to find a way to identify these regularities in a systematic rather than by eye. I decided to do this using an old technique from computer science: prefix tries!
 
 Sanity checks for prefix identification:
-[] random shuffling (random position per sequence)
-[] nth occurence of syllable x in each sequence
-[] position n in each sequence
-  [] tagging intro to end should roughly reintroduce deterministic sequence later in ribbon plot?
+[x] random shuffling (random position per sequence)
+[x] nth occurence of syllable x in each sequence
+[x] position n in each sequence
 
 ```{r ribbons}
 
 titleMap <- data.frame(
   old = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
   new = c('Bird 1', 'Bird 2', 'Bird 3', 'Bird 4', 'Bird 5', 'Bird 6')
+)
+
+typeMap <- data.frame(
+  old = c('2', '4', '5', '6', '7', '8'),
+  new = c('Full Song', "Run-Collapsed Song", "Reversed Song", "Randomized Song", "10-Character Rotated Song", "3rd Syllable-Instance Rotated Song")
 )
 
 for (col in c(2, 4, 5, 6, 7, 8)) {
@@ -399,27 +427,39 @@ for (col in c(2, 4, 5, 6, 7, 8)) {
       labs(
         x = "Position",
         y = "Proportion",
-        fill = "State",
+        fill = "Syllable",
         title = titleMap$new[titleMap$old == bird]
       ) +
       scale_fill_paletteer_d("rcartocolor::Prism") +
-      theme_minimal()
+      theme_minimal()+
+      theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        #text = element_text(family = "Times New Roman"), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line())
     
   }
   
   combined_plot <-
-    wrap_plots(plot_list, ncol = 2)
+    wrap_plots(plot_list, ncol = 3, axis_titles = 'collect')+
+    plot_annotation(title = typeMap$new[typeMap$old == col], 
+                    theme = theme(plot.title = element_text(size = 25, face = "bold", hjust = 0.5)))
   
-  print(combined_plot)
+  ggsave(sprintf("../plots/%s_birdsCombined.jpg", typeMap$new[typeMap$old==col]), combined_plot, width = 18, height = 8, create.dir = T)
+  
+  #print(combined_plot)
   
 }
 
 ```
 
-
 ## Prefix Tries
 
-Tries are a search tree data structure that encode and retrieve strings from dictionaries, in this case, our birdsong corpora. Each child node of this tree shares a common prefix with it;s parents, and in this way you can start to track common prefixes within the entire lexicon. I have compiled a trie for each bird's corpus, and then below, isolated prefixes from this trie that initiate more than 10% of songs. Ive set the maximum prefix length to 20 tokens, approximated from the max length of regularities from the ribbon plots (Bird 1, specifically). The resulting table identifies prefixes at most 20 tokens long (from the collapsed song version)
+Tries are a search tree data structure that encode and retrieve strings from dictionaries, in this case, our birdsong corpora. Each child node of this tree shares a common prefix with its parents, and in this way you can start to track common prefixes within the entire lexicon. I have compiled a trie for each bird's corpus, and then below, isolated prefixes from this trie that initiate more than 10% of songs. Ive set the maximum prefix length to 20 tokens, approximated from the max length of regularities from the ribbon plots (Bird 1, specifically). The resulting table identifies prefixes at most 20 tokens long (from the collapsed song version)
 
 For reference: https://en.wikipedia.org/wiki/Trie
 
@@ -482,11 +522,11 @@ trieCounts$type <- recode(trieCounts$type, '4' = "collapsed", '5' = 'reversed', 
 
 ## Cropped Sequences
 
-I identified prefixes from the trie that occur in more than 10% of songs, by bird, and cropped these prefixes out of the songs.
+I identified prefixes from the trie that occur in more than 5% of songs, by bird, and cropped these prefixes out of the songs.
 
 ```{r crop}
-# identify deterministic prefixes occurring more than 20% of the time
-cropTable <- trieCounts[(round(trieCounts$prop, 3)) >=.100,]
+# identify deterministic prefixes occurring more than 5% of the time
+cropTable <- trieCounts[(round(trieCounts$prop, 3)) >=.050,]
 
 # crop out strong prefixes in normal songs
 
@@ -589,7 +629,7 @@ for (dat in all){
 
 Then I generated ribbon plots again of the cropped sequences. As you can see, they are much more stable! I am pretty confident that this section of the songs can be modeled well by my Markov chains. 
 
-#### cropped full
+#### cropped (full)
 
 ```{r crop-rib}
 
@@ -645,18 +685,29 @@ for (dat in all) {
     labs(
       x = "Position",
       y = "Proportion",
-      fill = "State",
+      fill = "Syllable",
       title = titleMap$new[titleMap$old == bird]
     ) +
     scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
+    theme_minimal()+
+    theme(
+        plot.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        #text = element_text(family = "Times New Roman"), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line())
   
 }
 
 combined_plot <-
-  wrap_plots(plot_list, ncol =2)
+  wrap_plots(plot_list, ncol =3)
 
-combined_plot
+#combined_plot
+
+ggsave("../plots/birdsCropped.jpg", combined_plot, width = 18, height = 8)
 ```
 
 #### cropped collapsed
@@ -709,11 +760,20 @@ for (dat in all) {
     labs(
       x = "Position",
       y = "Proportion",
-      fill = "State",
+      fill = "Syllable",
       title = bird
     ) +
     scale_fill_paletteer_d("rcartocolor::Prism") +
-    theme_minimal()
+    theme_minimal()+
+    theme(
+        plot.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        #text = element_text(family = "Times New Roman"), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line())
   
   print(p)
   
@@ -721,6 +781,140 @@ for (dat in all) {
 ```
 
 
+
+```{r}
+prefixes %>%
+  group_by(bird) %>%
+  summarise(n = n())
+```
+
+```{r}
+library(dplyr)
+
+# ---------------------------------------------------------------------------
+# Generates one LaTeX `longtable` per unique value of `type`, with rows
+# grouped by `bird` using \multirow, matching the target format (minus
+# cellcolor, which the user will add separately).
+#
+# Uses longtable so the table can split automatically across pages. Page
+# breaks WITHIN a bird's multirow block are prevented by ending every row
+# but the last in that block with "\\*" instead of "\\" -- this is a
+# built-in array/longtable feature that forbids a page break immediately
+# after that row, so a break can only occur between two different birds'
+# blocks (at \addlinespace), never inside one.
+#
+# NOTE: earlier versions of this script used \Needspace{} for this purpose.
+# That doesn't work: \Needspace calls \par internally, which is illegal
+# inside a table cell (restricted horizontal mode) and throws errors. \\*
+# is the correct, package-free way to do this in longtable.
+#
+# IMPORTANT: this function emits no blank lines anywhere inside the
+# longtable body. A blank line inside a table environment is interpreted
+# by LaTeX as the start of a new paragraph, which is invalid there and
+# throws errors (e.g. "Paragraph ended before \@array was complete"). If
+# you hand-edit the output, do not add blank lines inside the table --
+# use \addlinespace for vertical spacing instead.
+#
+# Requires in the LaTeX preamble:
+#   \usepackage{longtable}
+#   \usepackage{multirow}
+#   \usepackage{booktabs}
+#   \usepackage[table]{xcolor}   % only if you add \cellcolor afterwards --
+#                                 % and every color name used must be
+#                                 % \definecolor'd, or you'll get
+#                                 % "Undefined color" errors.
+#
+# Expects a data frame with columns: prefix, prop, bird, type
+# ---------------------------------------------------------------------------
+
+make_prefix_table <- function(df, type_val, caption = NULL, label = NULL) {
+
+  sub <- df %>% filter(type == type_val)
+
+  if (nrow(sub) == 0) {
+    warning(sprintf("No rows found for type = '%s'", type_val))
+    return(invisible(NULL))
+  }
+
+  if (is.null(caption)) {
+    caption <- sprintf(
+      "\\textit{%s prefix families.} Prefix and the proportion of strings containing that prefix (Prop.) are listed by bird.",
+      type_val
+    )
+  }
+  if (is.null(label)) {
+    label <- sprintf("tab:prefixes_%s", gsub("[^A-Za-z0-9]", "", type_val))
+  }
+
+  birds <- unique(sub$bird)  # preserves first-appearance order; use sort(unique(...)) for alphabetical order
+
+  header <- c(
+    "Bird & Prefix & Prop. \\\\",
+    "\\midrule"
+  )
+
+  # Note: "%" comment lines below are used instead of blank lines purely to
+  # keep the generated .tex source readable -- they are safe (LaTeX
+  # comments), unlike actual blank lines, which are not.
+  lines <- c(
+    "\\begin{longtable}{llrr}",
+    sprintf("\\caption{%s}\\label{%s} \\\\", caption, label),
+    "\\toprule",
+    header,
+    "\\endfirsthead",
+    "%",
+    "\\multicolumn{3}{c}{\\tablename\\ \\thetable{} -- continued from previous page} \\\\",
+    "\\toprule",
+    header,
+    "\\endhead",
+    "%",
+    "\\midrule",
+    "\\multicolumn{3}{r}{Continued on next page} \\\\",
+    "\\endfoot",
+    "%",
+    "\\hline",
+    "\\endlastfoot",
+    "%"
+  )
+
+  for (i in seq_along(birds)) {
+    b <- birds[i]
+    bird_rows <- sub %>% filter(bird == b)
+    n <- nrow(bird_rows)
+
+    lines <- c(lines, sprintf("\\multirow{%d}{*}{%s}", n, b))
+
+    for (j in seq_len(n)) {
+      # "\\*" on all but the last row of the block forbids a page break
+      # right after that row, keeping the whole \multirow block together.
+      row_end <- if (j < n) "\\\\*" else "\\\\"
+      lines <- c(
+        lines,
+        sprintf("& %s & %.2f %s",
+                bird_rows$prefix[j],
+                bird_rows$prop[j],
+                row_end)
+      )
+    }
+
+    if (i < length(birds)) {
+      lines <- c(lines, "\\addlinespace")
+    }
+  }
+
+  lines <- c(lines, "\\end{longtable}")
+
+  cat(paste(lines, collapse = "\n"), "\n\n")
+}
+
+# ---------------------------------------------------------------------------
+# Run for every type in cropTable
+# ---------------------------------------------------------------------------
+
+for (t in unique(cropTable$type)) {
+  make_prefix_table(cropTable, t)
+}
+```
 
 
 

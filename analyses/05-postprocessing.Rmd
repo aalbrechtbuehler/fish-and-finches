@@ -6,7 +6,7 @@ output: html_document
 ```{r}
 
 library(pacman)
-p_load(dplyr, ggplot2, papaja, tidybins, paletteer, patchwork)
+p_load(dplyr, ggplot2, papaja, tidybins, paletteer, patchwork, philentropy, latex2exp)
 
 df <- read.csv("simResults.csv")
 
@@ -46,93 +46,143 @@ estComparison <- bestKs %>%
 
 #plot :)
 
+wayColor <- scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))
+wayShape <- scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))
+
 #true generative k by way
 pK <- ggplot(bestKs, aes(x = trueK, y = correct, group = way, color = way, shape = way))+
-  stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
-  stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
+  stat_summary(geom = 'line', position = 'identity', fun = 'mean', linewidth = 1)+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', size = 5)+
+  stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .5, alpha = .7)+
   geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
   #annotate("text", x=.75, y=.2, label="chance performance", color = "red")+
   scale_y_continuous(limits = c(0,1))+
   scale_x_continuous(breaks = c(0,1,2,3,4,5))+
-  labs(x = "True Generative K", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
-  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
-  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
-  theme_bw()
+  labs(x = "K", y = "Correct Detection", color = "Modeling Strategy", shape = "Modeling Strategy")+
+  wayColor+
+  wayShape+
+  theme_bw()+
+    theme(
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        legend.position = "none",
+        axis.title.y = element_blank())
 
 # entropy effects by way
 pEnt <- ggplot(bestKs, aes(x = entropyBinned, y = correct, group = way, color = way, shape = way))+
-  stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
+  stat_summary(geom = 'line', position = 'identity', fun = 'mean', linewidth = 1)+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', size = 5)+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
   geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
   #annotate("text", x=2.75, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Binned Entropy", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
-  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
-  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
-  theme_bw()
+  labs(x = TeX(paste0("Binned $\\tilde{H}$")), y = "Correct Detection", color = "Modeling Strategy", shape = "Modeling Strategy")+
+  wayColor+
+  wayShape+
+  theme_bw()+
+    theme(
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        legend.position = "none",
+        axis.title.y = element_blank())
 
 # nstate effects by way
 pState <- ggplot(bestKs, aes(x = nStates, y = correct, group = way, color = way, shape = way))+
-  stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
+  stat_summary(geom = 'line', position = 'identity', fun = 'mean', linewidth = 1)+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', size = 5)+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
   geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
   #annotate("text", x=1.5, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Number of Unique Characters", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
-  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
-  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
-  theme_bw()
+  labs(x = "nChar", y = "Correct Detection", color = "Modeling Strategy", shape = "Modeling Strategy")+
+  wayColor+
+  wayShape+
+  theme_bw()+
+    theme(
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank())
 
 #corpus size by size
 pSize <- ggplot(bestKs, aes(x = corpusSize, y = correct, group = way, color = way, shape = way))+
-  stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
+  stat_summary(geom = 'line', position = 'identity', fun = 'mean', linewidth = 1)+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', size = 5)+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
   geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
   #annotate("text", x=175, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "Corpus Size", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
-  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
-  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
-  theme_bw()
+  labs(x = "corpusSize", y = "Correct Detection", color = "Modeling Strategy", shape = "Modeling Strategy")+
+  wayColor+
+  wayShape+
+  theme_bw()+
+    theme(
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        legend.position = "none"
+        )
 
 #sequence length effects by way
 pLength <- ggplot(bestKs, aes(x = seqLength, y = correct, group = way, color = way, shape = way))+
-  stat_summary(geom = 'line', position = 'identity', fun = 'mean')+
-  stat_summary(geom = 'point', position = 'identity', fun = 'mean')+
+  stat_summary(geom = 'line', position = 'identity', fun = 'mean', linewidth = 1)+
+  stat_summary(geom = 'point', position = 'identity', fun = 'mean', size = 5)+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, linewidth = .2, alpha = .7)+
   geom_hline(yintercept=.167, color = "gray55", linetype = 2) +
   #annotate("text", x=175, y=.2, label="chance performance", color = "gray75")+
   scale_y_continuous(limits = c(0,1))+
-  labs(x = "String Length", y = "Correct Detection", color = "Sampling Method", shape = "Sampling Method")+
-  scale_color_manual(values = c("#356893", "#be5947"), labels = c("Lagged", "Collapsed"))+
-  scale_shape_manual(values = c(16, 17), labels = c("Lagged", "Collapsed"))+
-  theme_bw()
+  labs(x = "length", y = "Correct Detection", color = "Modeling Strategy", shape = "Modeling Strategy")+
+  wayColor+
+  wayShape+
+  theme_bw()+
+    theme(
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank())
 
 
 combined <- (pK | pState) /
             (pSize | pLength) /
             pEnt +
-  plot_layout(guides = "collect")
+  plot_layout(guides = "collect", axes = 'collect')
+
+ggsave("../plots/simResults.jpg", combined, width = 15, height = 15)
 
 combined
 
 palette <- paletteer_d("rcartocolor::Prism")
 
 #etimation bias by way
-ggplot(estComparison %>% filter(overunder != "exact"), aes(x = factor(trueK), y = signed_prop, group = overunder, fill = factor(k)))+
-  geom_col()+
-  facet_wrap(~way, labeller = as_labeller(c(lagged = 'Lagged', semicol = 'Collapsed')))+
-  geom_hline(yintercept = 0)+
-  scale_y_continuous(limits = c(-1, 1))+
-  labs(x = "True K", y = "Proportional Estimation Bias \n (Underestimate / Overestimate)", fill = "Predicted K")+
-  #scale_fill_viridis_d(option = "D", direction = -1)+
-  scale_fill_manual(values = palette[c(1,2,4,6,8,9)])+
-  theme_bw()
+p_load(ggh4x)
 
+biasplot <- ggplot(estComparison %>% filter(overunder != "exact"), 
+                    aes(x = factor(trueK), y = signed_prop, group = overunder, fill = factor(k))) +
+  geom_col() +
+  facet_wrap2(
+    ~way,
+    labeller = as_labeller(c(lagged = 'Lagged History', semicol = 'Collapsed History')),
+    strip = strip_themed(
+      background_x = elem_list_rect(fill = c("#356893", "#be5947"))
+    )
+  ) +
+  geom_hline(yintercept = 0) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  labs(x = "K", y = "Proportional Estimation Bias \n (Underestimate / Overestimate)", fill = TeX("$\\hat{k}$")) +
+  scale_fill_manual(values = palette[c(1,2,4,6,8,9)]) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 20),
+    axis.text = element_text(size = 15),
+    legend.title = element_text(size = 15, hjust = .5),
+    legend.text = element_text(size = 13)
+  )
+
+ggsave("../plots/simBiases.jpg", biasplot, width = 10, height = 8)
 
 ```
 # Sampling Results
@@ -187,17 +237,24 @@ fishResults <- fishMaxs %>%
 fullFishResults <- fishMaxs %>%
   count(species, k, sort = TRUE)
 
-ggplot(fishDF, aes(x = k, y = log_likelihood))+
+p1 <- ggplot(fishDF, aes(x = k, y = log_likelihood))+
   stat_summary(geom = 'bar', position = 'identity', fun = 'mean', fill = "#be5947")+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "gray25")+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "gray25")+
   labs(x = "K-order", y = "Average LL")+
-  facet_wrap(~species, labeller = as_labeller(c(bre = 'N. brevis', mee = 'L. meeli', mul = 'N. multifasciatus',
+  facet_wrap(~species, labeller = as_labeller(c(bre = 'N. brevis', mee = 'N. meeli', mul = 'N. multifasciatus',
                                                 oce = 'L. ocellatus', orn = 'L. ornatipinnis', pul = 'N. pulcher')))+
   geom_segment(data = fishResults, aes(x = k, xend = k, y = avgLL-.45, yend = avgLL-.15), 
                arrow = arrow(length = unit(0.2, "cm"), type = 'closed'), inherit.aes = FALSE)+
   theme_apa()+
-  theme(strip.text = element_text(face = "italic"))
+    theme(
+#        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        strip.text = element_text(size = 18, face = 'oblique'),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15, hjust = .5),
+        legend.text = element_text(size = 13)
+)
 
 
 ### birds
@@ -239,7 +296,7 @@ birdResults <- birdMaxs %>%
 fullbirdResults <- birdMaxs %>%
   count(species, k, sort = TRUE)
 
-ggplot(birdDF, aes(x = k, y = log_likelihood))+
+p2 <- ggplot(birdDF, aes(x = k, y = log_likelihood))+
   stat_summary(geom = 'bar', position = 'identity', fun = 'mean', fill = "#be5947")+
   stat_summary(geom = 'point', position = 'identity', fun = 'mean', color = "gray25")+
   stat_summary(geom="errorbar", fun.data=mean_cl_normal, color = "gray25")+
@@ -247,11 +304,255 @@ ggplot(birdDF, aes(x = k, y = log_likelihood))+
   facet_wrap(~species, labeller = as_labeller(c(bird1 = 'Bird 1', bird2 = 'Bird 2', bird3 = 'Bird 3', bird4 = 'Bird 4', bird5 = 'Bird 5', bird6 = 'Bird 6')))+
   geom_segment(data = birdResults, aes(x = k, xend = k, y = avgLL-.2, yend = avgLL-.1), 
                arrow = arrow(length = unit(0.2, "cm"), type = 'closed'), inherit.aes = FALSE)+
-  theme_apa()
+  theme_apa()+
+  theme(
+#        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        strip.text = element_text(size = 18, face = 'oblique'),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15, hjust = .5),
+        legend.text = element_text(size = 13)
+)
+
+ggsave("../plots/fishSampleResults.jpg", p1, width = 10, height = 10)
+ggsave("../plots/birdSampleResults.jpg", p2, width = 10, height = 10)
+
+```
+
+# Generation Sanity Checks
+check how the length and syllable distributions compare between empirical and generated sequences for both fish and birds
+
+```{r}
+
+library(tidyverse)
+
+birds <- c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6')
+
+titleMap <- data.frame(
+  old = c('bird1', 'bird2', 'bird3', 'bird4', 'bird5', 'bird6'),
+  new = c('Bird 1', 'Bird 2', 'Bird 3', 'Bird 4', 'Bird 5', 'Bird 6')
+)
+
+syll_plots <- list()
+length_plots <- list()
+
+for (i in 1:length(birds)) {
+  
+  bird <- birds[i]
+  
+emp <- readLines(sprintf("../bird-data/raw/%s_full.txt", bird))
+gen <- readLines(sprintf("../generation-app/%s_playback.txt", bird))
+
+# Put them into one data frame
+dat <- tibble(
+  group = c(
+    rep("emp", length(emp)),
+    rep("gen", length(gen))
+  ),
+  string = c(emp, gen)
+)
+
+dat <- dat %>%
+  filter(string != "")%>%
+  mutate(length = nchar(string))
+
+dat$bird <- bird
+
+#all[[i]] <- dat
+
+length_plots[[bird]]<- ggplot(dat, aes(x = length, colour = group, fill = group)) +
+  geom_density(alpha = 0.2) +
+  # geom_histogram(
+  #   bins = 30,
+  #   alpha = 0.5,
+  #   position = "identity"
+  # ) +
+  scale_y_continuous(limits = c(0, .04))+
+  labs(
+    x = "Length",
+    y = "Density",
+    colour = "Dataset",
+    fill = "Dataset", 
+    title = titleMap$new[titleMap$old==bird]
+  ) +
+  scale_fill_manual(values = c("#9B59B6", "#229954"), labels = c("Empirical", "Generated"))+
+  scale_color_manual(values = c("#9B59B6", "#229954"), labels = c("Empirical", "Generated"))+
+  theme_apa()+
+      theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13))
+
+#print(p)
+
+#---
+
+char_dat <- dat %>%
+  mutate(character = strsplit(string, "")) %>%
+  unnest(character)
+
+char_counts <- char_dat %>%
+  count(group, character) %>%
+  group_by(group) %>%
+  mutate(
+    proportion = n / sum(n)
+  ) %>%
+  ungroup()
+
+syll_plots[[bird]] <- ggplot(char_counts, aes(x = character, y = proportion, fill = group)) +
+  geom_col(
+    position = position_dodge()
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Syllable",
+    y = "Proportion",
+    fill = "Dataset", 
+    title = titleMap$new[titleMap$old==bird]
+  ) +
+  scale_fill_manual(values = c("#9B59B6", "#229954"), labels = c("Empirical", "Generated"))+
+  theme_apa()+
+      theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13))
+
+}
+
+combined_syll <- wrap_plots(syll_plots, ncol = 3, guides = 'collect')
+
+combined_length <- wrap_plots(length_plots, ncol = 3, guides = 'collect', axes = 'collect')
+
+# ggsave("../plots/birdsyllableSC.jpg", combined_syll, width = 15, height = 7)
+# ggsave("../plots/birdlengthSC.jpg", combined_length, width = 15, height = 7)
+
+combined_syll
+combined_length
 
 ```
 
 
+syllable and length distributions for fish (length is trivial because it is set between first and third quartiles without any prefixes added)
+```{r}
 
-# Distribution Checks
-check how the length and syllable distributions compare between empirical and generated sequences for both fish and birds
+titleMap <- data.frame(old = c('bre', 'mil', 'mul', 'oce', 'orn', 'pul'),
+                       new = c('N. brevis', 'N. meeli', 'N. multifasciatus', 'L. ocellatus', 'L. ornatipinnis', 'N. pulcher'))
+
+species <- c('bre', 'mil', 'mul', 'oce', 'orn', 'pul')
+
+syll_plots <- list()
+length_plots <- list()
+
+df <- read.csv("../fish-data/raw/PrettyDat.csv")
+
+for (i in 1:length(species)) {
+  
+  specie<- species[i]
+  
+emp <- df[df$species==specie,]
+gen <- readLines(sprintf("../generation-app/%s_playback.txt", specie))
+
+emp <- emp %>%
+  arrange(trial_id, sequence_id, order_id, fish_id, species) %>%
+  group_by(trial_id, sequence_id, fish_id, species) %>%
+  summarise(
+  series = paste(rep(state, times = length), collapse = ""),
+  .groups = "drop"
+)
+
+
+
+# Put them into one data frame
+dat <- tibble(
+  group = c(
+    rep("emp", length(emp$series)),
+    rep("gen", length(gen))
+  ),
+  string = c(emp$series, gen)
+)
+
+dat <- dat %>%
+  filter(string != "")%>%
+  mutate(length = nchar(string))
+
+dat$species <- specie
+
+#all[[i]] <- dat
+
+length_plots[[specie]]<- ggplot(dat, aes(x = length, colour = group, fill = group)) +
+  geom_density(alpha = 0.2) +
+  # geom_histogram(
+  #   bins = 30,
+  #   alpha = 0.5,
+  #   position = "identity"
+  # ) +
+  scale_y_continuous(limits = c(0, .0015))+
+  labs(
+    x = "Length",
+    y = "Density",
+    colour = "Dataset",
+    fill = "Dataset", 
+    title = titleMap$new[titleMap$old==specie]
+  ) +
+  scale_fill_manual(values = c("#9B59B6", "#229954"), labels = c("Empirical", "Generated"))+
+  scale_color_manual(values = c("#9B59B6", "#229954"), labels = c("Empirical", "Generated"))+
+  theme_apa()+
+      theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13))
+
+
+char_dat <- dat %>%
+  mutate(character = strsplit(string, "")) %>%
+  unnest(character)
+
+char_counts <- char_dat %>%
+  count(group, character) %>%
+  group_by(group) %>%
+  mutate(
+    proportion = n / sum(n)
+  ) %>%
+  ungroup()
+
+syll_plots[[specie]] <- ggplot(char_counts, aes(x = character, y = proportion, fill = group)) +
+  geom_col(
+    position = position_dodge()
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, .35))+
+  labs(
+    x = "State",
+    y = "Proportion",
+    fill = "Dataset", 
+    title = titleMap$new[titleMap$old==specie]
+  ) +
+  scale_fill_manual(values = c("#9B59B6", "#229954"), labels = c("Empirical", "Generated"))+
+  theme_apa()+
+      theme(
+        plot.title = element_text(size = 20, face = "oblique"),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.text = element_text(size = 13))
+
+}
+
+combined_syll <- wrap_plots(syll_plots, ncol = 3, guides = 'collect', axes = 'collect')
+combined_length <- wrap_plots(length_plots, ncol = 3, guides = 'collect', axes = 'collect')
+
+ggsave("../plots/fishstateSC.jpg", combined_syll, width = 15, height = 7)
+ggsave("../plots/fishlengthSC.jpg", combined_length, width = 15, height = 7)
+
+combined_syll
+combined_length
+```
+
+## Heatmaps
+
+
