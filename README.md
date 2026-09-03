@@ -1,6 +1,6 @@
 # Interpretable Markovian Models of Animal Communication
 
-This repository contains the data, preprocessing pipeline, analyses, visualizations, and generation tools used to investigate sequence structure in fish behavior and birdsong. Analysis files are numbered in the order that they should be run.
+This repository contains the data, preprocessing pipeline, analyses, visualizations, and generation tools used to investigate sequence structure in fish postural communication and birdsong. Analysis files are numbered in the order that they should be run.
 
 ## Abstract 
 
